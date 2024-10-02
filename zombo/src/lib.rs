@@ -1,14 +1,16 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+struct Item {
+    id: u32,
+    name: String,
+
+    // Add Enum for below's two fields
+    item_type: String,
+    condition: String,
+    amount: u32,
+}
+
+struct Zomboid {
+    data: Vec<Item>,
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+mod tests {}
