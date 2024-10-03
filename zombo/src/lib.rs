@@ -1,23 +1,15 @@
-#[derive(Debug, serde::Deserialize)]
-struct Item {
-    id: u32,
-    name: String,
+use std::path::Path;
 
-    // Add Enum for below's two fields
-    #[serde(rename = "type")]
-    item_type: String,
-    condition: String,
-    amount: u32,
-}
+pub mod model;
 
 #[derive(Debug)]
 struct Zomboid {
-    data: Vec<Item>,
+    path: Path,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::Item;
+    use crate::model::Item;
     use csv;
     use std::{env::current_dir, path::PathBuf};
 
