@@ -1,17 +1,24 @@
 use model::Item;
-use std::fmt::Display;
+use table::Table;
 
 pub mod model;
+pub mod table;
 
 #[derive(Debug)]
 pub struct Zomboid<T> {
     it: T,
+    _take: Option<usize>,
+    _skip: Option<usize>,
 }
 
-#[derive(Debug)]
-pub struct Table {
-    header: Option<Vec<&'static str>>,
-    data: Vec<Item>,
+impl<T> Zomboid<T> {
+    pub fn set_take(&mut self, v: Option<usize>) {
+        self._take = v;
+    }
+
+    pub fn set_skip(&mut self, v: Option<usize>) {
+        self._skip = v;
+    }
 }
 
 impl<T, E> Zomboid<T>
@@ -20,55 +27,28 @@ where
     E: std::error::Error,
 {
     pub fn new(it: T) -> Self {
-        Self { it }
+        Self {
+            it,
+            _take: None,
+            _skip: None,
+        }
     }
 
-    pub fn stream(&mut self, take: usize, skip: usize) -> Result<Table, E> {
+    pub fn stream(&mut self) -> Result<Table, E> {
         let it = &mut self.it;
-        let items: Result<Vec<Item>, E> = it.skip(skip).take(take).collect();
-
+        let items: Result<Vec<Item>, E> = it
+            .skip(self._skip.unwrap_or(0))
+            .take(self._take.unwrap_or(usize::MAX))
+            .collect();
         Ok(Table::new(items?).with_header(vec!["ID", "NAME", "TYPE", "CONDITION", "AMOUNT"]))
     }
-}
 
-impl Table {
-    pub fn new(data: Vec<Item>) -> Self {
-        Self { header: None, data }
-    }
-
-    pub fn with_header(mut self, header: Vec<&'static str>) -> Self {
-        self.header = Some(header);
-        self
-    }
-}
-
-impl Display for Table {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let top = format!("┌{:─^114}┐", "");
-        let bot = format!("└{:─^114}┘", "");
-        let mid = format!("├{:─^114}┤", "");
-
-        writeln!(f, "{}", top)?;
-        if let Some(header) = &self.header {
-            for v in header {
-                write!(f, "│ {:^20} ", v)?;
-            }
-
-            write!(f, "│")?;
-            writeln!(f)?;
-
-            writeln!(f, "{}", mid)?;
-        }
-
-        for item in &self.data {
-            writeln!(
-                f,
-                "│ {:^20} │ {:^20} │ {:^20} │ {:^20} │ {:^20} │",
-                item.id, item.name, item.item_type, item.condition, item.amount
-            )?;
-        }
-        writeln!(f, "{}", bot)?;
-        Ok(())
+    pub fn describe(&mut self) -> Result<Table, E> {
+        // TODO: this method should describe the Iterator statistics
+        //      1. Percentage of items of each condition
+        //      2. ...
+        //      3. Make Table header owned instead of &'static str?
+        unimplemented!()
     }
 }
 
@@ -82,6 +62,7 @@ mod tests {
         cwd.parent().unwrap().join(".data/data.csv")
     }
 
+    #[ignore = "Doesn't test this library but rather iterators this library may use"]
     #[test]
     fn csv_reader() {
         let mut r = csv::Reader::from_path(data_path()).unwrap();
@@ -96,6 +77,7 @@ mod tests {
     fn zomboid_csv() {
         let mut r = csv::Reader::from_path(data_path()).unwrap();
         let mut z = Zomboid::new(r.deserialize());
-        println!("{}", z.stream(10, 0).unwrap())
+        // z.set_take(2);
+        println!("{}", z.stream().unwrap());
     }
 }
