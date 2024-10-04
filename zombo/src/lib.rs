@@ -1,3 +1,4 @@
+use core::str;
 use model::Item;
 use table::Table;
 
@@ -34,7 +35,7 @@ where
         }
     }
 
-    pub fn stream(&mut self) -> Result<Table, E> {
+    pub fn stream(&mut self) -> Result<Table<&str>, E> {
         let it = &mut self.it;
         let items: Result<Vec<Item>, E> = it
             .skip(self._skip.unwrap_or(0))
@@ -43,7 +44,7 @@ where
         Ok(Table::new(items?).with_header(vec!["ID", "NAME", "TYPE", "CONDITION", "AMOUNT"]))
     }
 
-    pub fn describe(&mut self) -> Result<Table, E> {
+    pub fn describe(&mut self) -> Result<Table<&str>, E> {
         // TODO: this method should describe the Iterator statistics
         //      1. Percentage of items of each condition
         //      2. ...
@@ -62,7 +63,7 @@ mod tests {
         cwd.parent().unwrap().join(".data/data.csv")
     }
 
-    #[ignore = "Doesn't test this library but rather iterators this library may use"]
+    #[ignore = "experiment"]
     #[test]
     fn csv_reader() {
         let mut r = csv::Reader::from_path(data_path()).unwrap();
@@ -77,7 +78,20 @@ mod tests {
     fn zomboid_csv() {
         let mut r = csv::Reader::from_path(data_path()).unwrap();
         let mut z = Zomboid::new(r.deserialize());
-        // z.set_take(2);
-        println!("{}", z.stream().unwrap());
+
+        z.set_take(Some(2));
+        z.set_skip(Some(2));
+
+        assert_eq!(z._skip, Some(2));
+        assert_eq!(z._take, Some(2));
+
+        let table = z.stream().unwrap();
+        let data = table.as_data();
+
+        assert_eq!(data.len(), 2);
+        assert_eq!(data[0].id, 2);
+        assert_eq!(data[1].id, 3);
+
+        println!("{}", table);
     }
 }
