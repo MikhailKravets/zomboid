@@ -59,6 +59,7 @@ mod tests {
     use std::{env::current_dir, path::PathBuf};
 
     fn data_path() -> PathBuf {
+        // TODO: create a file before test, delete a file after test
         let cwd = current_dir().unwrap();
         cwd.parent().unwrap().join(".data/data.csv")
     }
