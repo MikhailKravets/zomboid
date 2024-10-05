@@ -68,10 +68,12 @@ pub struct Zomboid<T> {
 }
 
 impl<T> Zomboid<T> {
+    /// Set how many items to take on next [`Zomboid::stream`] call
     pub fn set_take(&mut self, v: Option<usize>) {
         self._take = v;
     }
 
+    /// Set how many items to skip on next [`Zomboid::stream`] call
     pub fn set_skip(&mut self, v: Option<usize>) {
         self._skip = v;
     }
@@ -90,6 +92,14 @@ where
         }
     }
 
+    /// Consumes iterator of Items and builds a table.
+    ///
+    /// Amount of items to take and skip can be managed
+    /// by [`Zomboid::set_take`] and [`Zomboid::set_skip`].
+    ///
+    /// # Return
+    ///
+    /// Method returns [`Result<T, E>`] where `T` is [`table::Table<Item>`].
     pub fn stream(&mut self) -> Result<Table<Item>, E> {
         let it = &mut self.it;
         let items: Result<Vec<Item>, E> = it
@@ -99,6 +109,11 @@ where
         Ok(Table::new(items?).with_header(vec!["ID", "NAME", "TYPE", "CONDITION", "AMOUNT"]))
     }
 
+    /// Consumes an iterator and calculate basic statistics
+    /// over the processed data.
+    ///
+    /// Amount of items to take and skip can be managed
+    /// by [`Zomboid::set_take`] and [`Zomboid::set_skip`].
     pub fn describe(&mut self) -> Result<Table<&str>, E> {
         // TODO: this method should describe the Iterator statistics
         //      1. Percentage of items of each condition
