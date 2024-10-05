@@ -56,28 +56,53 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{model::Item, Zomboid};
-    use std::{env::current_dir, path::PathBuf};
+    use csv::Writer;
+    use std::error::Error;
+    use std::path::Path;
+    use std::path::PathBuf;
+    use std::{fs, io};
+    use uuid::Uuid;
 
-    fn data_path() -> PathBuf {
-        // TODO: create a file before test, delete a file after test
-        let cwd = current_dir().unwrap();
-        cwd.parent().unwrap().join(".data/data.csv")
+    const BASE_PATH: &str = "~/.cache/rust/testing";
+
+    fn setup_csv() -> Result<PathBuf, Box<dyn Error>> {
+        fs::create_dir_all(BASE_PATH)?;
+        let path = format!("{}/{}.csv", BASE_PATH, Uuid::new_v4());
+        let mut writer = Writer::from_path(&path)?;
+
+        writer.write_record(["id", "name", "type", "condition", "amount"])?;
+        writer.write_record(["1", "Hummer", "Tool", "Mint", "10"])?;
+        writer.write_record(["2", "Nails", "Fasteners", "Good", "400"])?;
+        writer.write_record(["2", "Nails", "Fasteners", "Mint", "100"])?;
+        writer.write_record(["3", "Garden saw", "Tool", "New", "2"])?;
+        writer.write_record(["4", "Metal saw", "Tool", "New", "2"])?;
+
+        Ok(path.into())
+    }
+
+    fn teardown_csv(path: impl AsRef<Path>) -> io::Result<()> {
+        fs::remove_file(path)?;
+        Ok(())
     }
 
     #[ignore = "experiment"]
     #[test]
     fn csv_reader() {
-        let mut r = csv::Reader::from_path(data_path()).unwrap();
+        let file_path = setup_csv().unwrap();
+        let mut r = csv::Reader::from_path(&file_path).unwrap();
 
         for res in r.deserialize() {
             let rec: Item = res.unwrap();
             println!("{:?}", rec);
         }
+
+        teardown_csv(file_path).unwrap();
     }
 
     #[test]
     fn zomboid_csv() {
-        let mut r = csv::Reader::from_path(data_path()).unwrap();
+        let file_path = setup_csv().unwrap();
+        let mut r = csv::Reader::from_path(&file_path).unwrap();
         let mut z = Zomboid::new(r.deserialize());
 
         z.set_take(Some(2));
@@ -94,5 +119,7 @@ mod tests {
         assert_eq!(data[1].id, 3);
 
         println!("{}", table);
+
+        teardown_csv(file_path).unwrap();
     }
 }
