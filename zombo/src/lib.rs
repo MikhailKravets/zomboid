@@ -1,4 +1,3 @@
-use core::str;
 use model::Item;
 use table::Table;
 

@@ -1,9 +1,78 @@
+//! Table module provides simple terminal table formatter.
+//! [`Table`] struct implements [`Display`] trait that formats data to the table similar to
+//!
+//! ```ignore
+//! ┌─────────────────────────────┐
+//! │   Header 1   │   Header 2   │
+//! ├─────────────────────────────┤
+//! │     One      │     Two      │
+//! │    Three     │     Four     │
+//! └─────────────────────────────┘
+//! ```
+//!
+//! Struct [`Table`] is generic over cell type `T`. Ensure that type `T` implements
+//! [`RowDisplay`] trait. The method [`RowDisplay::to_row`] returns a [`String`] that
+//! represent formatted table row.
+//!
+//! # Examples
+//!
+//! Imagine we have an `Row` struct then the implementation of [`RowDisplay`] for `Row`
+//! and further usage of [`Table`] struct could be
+//!
+//! ```rust
+//! use zombo::table::RowDisplay;
+//! use zombo::table::Table;
+//!
+//! struct Row {
+//!     id: usize,
+//!     name: String
+//! }
+//!
+//! impl RowDisplay for Row {
+//!     fn to_row(&self, table_width: usize) -> String {
+//!         // table_width is the width of table in characters.
+//!         //
+//!         // Divide on 2 because Row has two fields and we
+//!         // want to give them both cells an equal width.
+//!         //
+//!         // Minus 3 because we add 3 additional chars to each cell
+//!         let width = table_width / 2 - 3;
+//!         format!("│ {:^width$} │ {:^width$}│", self.id, self.name)
+//!     }
+//! }
+//!
+//! let data = vec![
+//!     Row {id: 1, name: "One".into()},
+//!     Row {id: 2, name: "Two".into()}
+//! ];
+//! let table = Table::new(data)
+//!                 .with_header(vec!["COL1", "COL2"])
+//!                 .with_width(90);
+//! println!("{table}");
+//!
+//! // Borrow table data immutably
+//! let data = table.as_data();
+//! ```
+//!
+//! Currently [`Table`] only supports header of static strings. However, this is a subject
+//! to change later.
 use std::fmt::Display;
 
+/// A trait to implement if you want a type to be formatted
+/// as a row of a table.
+///
+/// You might use this symbol `│`.
 pub trait RowDisplay {
+    /// # Arguments
+    ///
+    /// * `table_width` is a table width in characters. This argument may be useful to
+    ///                 calculate the size of a cell of a row.
     fn to_row(&self, table_width: usize) -> String;
 }
 
+/// Table represents a container for data to be formatted as a table.
+/// Optionally, you may set a header to the table and width in characters.
+/// Currenty, table header accepts only a Vec of 'static strings.
 #[derive(Debug)]
 pub struct Table<T> {
     header: Option<Vec<&'static str>>,
@@ -30,17 +99,17 @@ impl<T> Table<T> {
         self
     }
 
-    pub fn top_sep(&self) -> String {
+    fn top_sep(&self) -> String {
         let width = self.width - 2;
         format!("┌{:─^width$}┐", "")
     }
 
-    pub fn middle_sep(&self) -> String {
+    fn middle_sep(&self) -> String {
         let width = self.width - 2;
         format!("├{:─^width$}┤", "")
     }
 
-    pub fn bottom_sep(&self) -> String {
+    fn bottom_sep(&self) -> String {
         let width = self.width - 2;
         format!("└{:─^width$}┘", "")
     }
@@ -52,6 +121,9 @@ impl<T> Table<T> {
     }
 }
 
+/// This is an implementation of RowDisplay for table header.
+/// Potentially header can be something bigger then just `&'static str`,
+/// so this implementation is generic.
 impl<H: Display> RowDisplay for Vec<H> {
     fn to_row(&self, table_width: usize) -> String {
         let width = table_width / self.len() - 3;
