@@ -1,71 +1,89 @@
 use std::fmt::Display;
 
-// TODO: data should be also a generic over T: Display
-// TODO: create a Row struct / trait?
+pub trait RowDisplay {
+    fn to_row(&self, table_width: usize) -> String;
+}
+
 #[derive(Debug)]
-pub struct Table<H, T> {
-    header: Option<Vec<H>>,
-    width: u32,
+pub struct Table<T> {
+    header: Option<Vec<&'static str>>,
+    width: usize,
     data: Vec<T>,
 }
 
-#[derive(Debug)]
-pub struct Row<T> {
-    table_width: u32,
-    it: T,
-}
-
-impl<H: Display, T> Table<H, T> {
+impl<T> Table<T> {
     pub fn new(data: Vec<T>) -> Self {
         Self {
             header: None,
             data,
-            width: 120,
+            width: 100,
         }
     }
 
-    pub fn with_header(mut self, header: Vec<H>) -> Self {
+    pub fn with_header(mut self, header: Vec<&'static str>) -> Self {
         self.header = Some(header);
         self
     }
 
-    pub fn with_width(mut self, width: u32) -> Self {
+    pub fn with_width(mut self, width: usize) -> Self {
         self.width = width;
         self
     }
+
+    pub fn top_sep(&self) -> String {
+        let width = self.width - 2;
+        format!("┌{:─^width$}┐", "")
+    }
+
+    pub fn middle_sep(&self) -> String {
+        let width = self.width - 2;
+        format!("├{:─^width$}┤", "")
+    }
+
+    pub fn bottom_sep(&self) -> String {
+        let width = self.width - 2;
+        format!("└{:─^width$}┘", "")
+    }
 }
 
-impl<H, T> Table<H, T> {
+impl<T> Table<T> {
     pub fn as_data(&self) -> &Vec<T> {
         &self.data
     }
 }
 
-impl<H: Display, T> Display for Table<H, T> {
+impl<H: Display> RowDisplay for Vec<H> {
+    fn to_row(&self, table_width: usize) -> String {
+        let width = table_width / self.len() - 3;
+        let mut s = String::new();
+        for v in self {
+            s.push_str(&format!("│ {:^width$} ", v));
+        }
+
+        // Last column will always have 1 redundant char at the end.
+        s.pop();
+        s.push('│');
+
+        s
+    }
+}
+
+impl<T: RowDisplay> Display for Table<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let top = format!("┌{:─^114}┐", "");
-        let bot = format!("└{:─^114}┘", "");
-        let mid = format!("├{:─^114}┤", "");
+        let top = self.top_sep();
+        let mid = self.middle_sep();
+        let bot = self.bottom_sep();
 
         writeln!(f, "{}", top)?;
         if let Some(header) = &self.header {
-            for v in header {
-                write!(f, "│ {:^20} ", v)?;
-            }
-
-            write!(f, "│")?;
-            writeln!(f)?;
-
+            writeln!(f, "{}", header.to_row(self.width))?;
             writeln!(f, "{}", mid)?;
         }
 
-        for item in &self.data {
-            writeln!(
-                f,
-                "│ {:^20} │ {:^20} │ {:^20} │ {:^20} │ {:^20} │",
-                item.id, item.name, item.item_type, item.condition, item.amount
-            )?;
+        for v in &self.data {
+            writeln!(f, "{}", v.to_row(self.width))?;
         }
+
         writeln!(f, "{}", bot)?;
         Ok(())
     }
@@ -74,9 +92,10 @@ impl<H: Display, T> Display for Table<H, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::Item;
 
     #[test]
-    fn table_header() {
+    fn table_with_header() {
         let item = Item {
             id: 1,
             name: "Test".into(),
@@ -84,7 +103,20 @@ mod tests {
             condition: "Good".into(),
             amount: 10,
         };
-        let table = Table::<String>::new(vec![item]);
+        let table =
+            Table::new(vec![item]).with_header(vec!["ID", "NAME", "TYPE", "CONDITION", "AMOUNT"]);
+    }
+
+    #[test]
+    fn table_without_header() {
+        let item = Item {
+            id: 1,
+            name: "Test".into(),
+            item_type: "Test".into(),
+            condition: "Good".into(),
+            amount: 10,
+        };
+        let table = Table::new(vec![item]);
 
         assert_eq!(table.data.len(), 1);
         assert_eq!(table.data[0].id, 1);

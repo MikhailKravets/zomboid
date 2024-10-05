@@ -35,7 +35,7 @@ where
         }
     }
 
-    pub fn stream(&mut self) -> Result<Table<&str>, E> {
+    pub fn stream(&mut self) -> Result<Table<Item>, E> {
         let it = &mut self.it;
         let items: Result<Vec<Item>, E> = it
             .skip(self._skip.unwrap_or(0))
