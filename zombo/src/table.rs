@@ -1,31 +1,47 @@
-use crate::model::Item;
 use std::fmt::Display;
 
 // TODO: data should be also a generic over T: Display
+// TODO: create a Row struct / trait?
 #[derive(Debug)]
-pub struct Table<H> {
+pub struct Table<H, T> {
     header: Option<Vec<H>>,
-    data: Vec<Item>,
+    width: u32,
+    data: Vec<T>,
 }
 
-impl<H: Display> Table<H> {
-    pub fn new(data: Vec<Item>) -> Self {
-        Self { header: None, data }
+#[derive(Debug)]
+pub struct Row<T> {
+    table_width: u32,
+    it: T,
+}
+
+impl<H: Display, T> Table<H, T> {
+    pub fn new(data: Vec<T>) -> Self {
+        Self {
+            header: None,
+            data,
+            width: 120,
+        }
     }
 
     pub fn with_header(mut self, header: Vec<H>) -> Self {
         self.header = Some(header);
         self
     }
+
+    pub fn with_width(mut self, width: u32) -> Self {
+        self.width = width;
+        self
+    }
 }
 
-impl<H> Table<H> {
-    pub fn as_data(&self) -> &Vec<Item> {
+impl<H, T> Table<H, T> {
+    pub fn as_data(&self) -> &Vec<T> {
         &self.data
     }
 }
 
-impl<H: Display> Display for Table<H> {
+impl<H: Display, T> Display for Table<H, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let top = format!("┌{:─^114}┐", "");
         let bot = format!("└{:─^114}┘", "");
