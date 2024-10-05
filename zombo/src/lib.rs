@@ -16,12 +16,20 @@
 //! Let's read data from `.csv` and stream it with [`Zomboid`].
 //!
 //! ```no_run
-//! let mut r = csv::Reader::from_path("path/to/data.csv")?;
-//! let mut z = Zomboid::new(r.deserialize());
+//! use std::error::Error;
+//! use zombo::model::Item;
+//! use zombo::table::Table;
+//! use zombo::Zomboid;
 //!
-//! // z.stream() returns a Table that we can print to terminal
-//! let table = z.stream()?;
-//! println!("{}", table);
+//! fn read_and_print() -> Result<Table<Item>, Box<dyn Error>> {
+//!     let mut r = csv::Reader::from_path("path/to/data.csv")?;
+//!     let mut z = Zomboid::new(r.deserialize());
+//!
+//!     // z.stream() returns a Table that we can print to terminal
+//!     let table = z.stream()?;
+//!
+//!     Ok(table)
+//! }
 //! ```
 //!
 //! Default implementation of [`Zomboid::stream`] fully consumes the iterator.
@@ -29,12 +37,20 @@
 //! behaviour of the `stream`.
 //!
 //! ```no_run
-//! let mut z = Zomboid::new(r.deserialize());
+//! use std::error::Error;
+//! use zombo::model::Item;
+//! use zombo::table::Table;
+//! use zombo::Zomboid;
 //!
-//! z.set_take(Some(10));
-//! z.set_skip(Some(5));
+//! fn read_page() -> Result<Table<Item>, Box<dyn Error>> {
+//!     let mut r = csv::Reader::from_path("path/to/data.csv")?;
+//!     let mut z = Zomboid::new(r.deserialize());
+//!     z.set_take(Some(10));
+//!     z.set_skip(Some(5));
 //!
-//! z.stream()?;
+//!     Ok(z.stream()?)
+//! }
+//!
 //! ```
 //!
 //! The code above will make `z` object to take next 10 items skipping the first 5 ones.
