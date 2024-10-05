@@ -1,3 +1,43 @@
+//! Zomboid library provides a set of tools to read and visualize the accountant
+//! data provided by the survivalists.
+//!
+//! Main [`Zomboid`] struct is generic over Iterator that represents the data.
+//! So, it can process data of any format as long as it's an Iterator.
+//!
+//! Also, you may [`Zomboid::stream`] method as long as iterator is not fully consumed.
+//!
+//! # Examples
+//!
+//! [`Zomboid`] accepts a generic parameter `T: Iterator<Item = Result<Item, E>>`
+//! where [`model::Item`] is a serde deserializable object.
+//!
+//! ## CSV
+//!
+//! Let's read data from `.csv` and stream it with [`Zomboid`].
+//!
+//! ```no_run
+//! let mut r = csv::Reader::from_path("path/to/data.csv")?;
+//! let mut z = Zomboid::new(r.deserialize());
+//!
+//! // z.stream() returns a Table that we can print to terminal
+//! let table = z.stream()?;
+//! println!("{}", table);
+//! ```
+//!
+//! Default implementation of [`Zomboid::stream`] fully consumes the iterator.
+//! We can use [`Zomboid::set_take`] and [`Zomboid::set_skip`] to create a paginated
+//! behaviour of the `stream`.
+//!
+//! ```no_run
+//! let mut z = Zomboid::new(r.deserialize());
+//!
+//! z.set_take(Some(10));
+//! z.set_skip(Some(5));
+//!
+//! z.stream()?;
+//! ```
+//!
+//! The code above will make `z` object to take next 10 items skipping the first 5 ones.
 use model::Item;
 use table::Table;
 
