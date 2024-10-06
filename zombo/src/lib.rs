@@ -54,7 +54,8 @@
 //! ```
 //!
 //! The code above will make `z` object to take next 10 items skipping the first 5 ones.
-use model::Item;
+use model::{Item, Stat};
+use std::{collections::HashMap, usize};
 use table::Table;
 
 pub mod model;
@@ -101,25 +102,49 @@ where
     ///
     /// Method returns [`Result<T, E>`] where `T` is [`table::Table<Item>`].
     pub fn stream(&mut self) -> Result<Table<Item>, E> {
-        let it = &mut self.it;
-        let items: Result<Vec<Item>, E> = it
+        let items: Result<Vec<Item>, E> = self
+            .it
+            .by_ref()
             .skip(self._skip.unwrap_or(0))
             .take(self._take.unwrap_or(usize::MAX))
             .collect();
         Ok(Table::new(items?).with_header(vec!["ID", "NAME", "TYPE", "CONDITION", "AMOUNT"]))
     }
 
-    /// Consumes an iterator and calculate basic statistics
+    /// Consumes iterator of items and calculate basic statistics
     /// over the processed data.
+    ///
+    /// Currently, it calculates only a percentage of items of each
+    /// condition.
     ///
     /// Amount of items to take and skip can be managed
     /// by [`Zomboid::set_take`] and [`Zomboid::set_skip`].
-    pub fn describe(&mut self) -> Result<Table<&str>, E> {
-        // TODO: this method should describe the Iterator statistics
-        //      1. Percentage of items of each condition
-        //      2. ...
-        //      3. Make Table header owned instead of &'static str?
-        unimplemented!()
+    pub fn describe(&mut self) -> Result<Table<Stat>, E> {
+        let mut map_per_condition = HashMap::<String, u32>::new();
+        let mut total = 0u32;
+
+        for v in &mut self
+            .it
+            .by_ref()
+            .skip(self._skip.unwrap_or(0))
+            .take(self._take.unwrap_or(usize::MAX))
+        {
+            let item = v?;
+            *map_per_condition.entry(item.condition).or_insert(0) += item.amount;
+            total += item.amount;
+        }
+
+        let mut stats = Vec::<Stat>::with_capacity(map_per_condition.len());
+        for (name, amount) in map_per_condition.into_iter() {
+            stats.push(Stat {
+                name,
+                value: (amount as f64) / (total as f64),
+            });
+        }
+
+        Ok(Table::new(stats)
+            .with_header(vec!["CONDITION", "%"])
+            .with_width(40))
     }
 }
 
@@ -191,5 +216,15 @@ mod tests {
         println!("{}", table);
 
         teardown_csv(file_path).unwrap();
+    }
+
+    #[test]
+    fn describe() {
+        let file_path = setup_csv().unwrap();
+        let mut r = csv::Reader::from_path(&file_path).unwrap();
+        let mut z = Zomboid::new(r.deserialize());
+
+        let table = z.describe().unwrap();
+        println!("{}", table);
     }
 }
