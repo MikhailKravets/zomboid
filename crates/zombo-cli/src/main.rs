@@ -31,7 +31,10 @@ enum Command {
     Describe,
 }
 
-fn path_to_readers(path: impl AsRef<Path>) -> io::Result<Vec<csv::Reader<fs::File>>> {
+/// Read all files in `path` directory and return a Vector of [csv::Reader] objects.
+/// The directory must contain only `.csv` files, otherwise the function will
+/// return an error.
+fn dir_to_readers(path: impl AsRef<Path>) -> io::Result<Vec<csv::Reader<fs::File>>> {
     let mut vec = Vec::new();
     for entry in fs::read_dir(path)? {
         let entry = entry?;
@@ -40,6 +43,8 @@ fn path_to_readers(path: impl AsRef<Path>) -> io::Result<Vec<csv::Reader<fs::Fil
     Ok(vec)
 }
 
+/// Helper enumeration that allows handling either a single `.csv` file
+/// in the path or all the files in a whole directory.
 enum ZomboIter<S, D> {
     Single(Zomboid<S>),
     Dir(Zomboid<D>),
@@ -87,7 +92,7 @@ fn main() {
         );
         ZomboIter::Single(Zomboid::new(readers[0].deserialize()))
     } else {
-        readers = path_to_readers(args.path).expect("Couldn't read directory.");
+        readers = dir_to_readers(args.path).expect("Couldn't read directory.");
         ZomboIter::Dir(Zomboid::new(
             readers.iter_mut().flat_map(|it| it.deserialize::<Item>()),
         ))
@@ -105,4 +110,25 @@ fn main() {
             println!("{table}");
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Args;
+    use clap::CommandFactory;
+
+    #[test]
+    fn verify_cli() {
+        Args::command().debug_assert();
+    }
+
+    #[test]
+    fn readers_vec() {
+        panic!("write later")
+    }
+
+    #[test]
+    fn readers_vec_error() {
+        panic!("write later")
+    }
 }
