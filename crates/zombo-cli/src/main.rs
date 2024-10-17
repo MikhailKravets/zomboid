@@ -14,15 +14,30 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    List { take: usize, skip: usize },
+    List {
+        #[arg(short, long)]
+        take: Option<usize>,
+
+        #[arg(short, long)]
+        skip: Option<usize>,
+    },
     Describe,
 }
 
 fn main() {
     let args = Args::parse();
-    // TODO: read data from args.path. Should it be directory or file?
-    // TODO: create csv iterator; chain in case of directory. Pass to Zomboid
-    // TODO: match command and do action
-    // let zombo = Zomboid::new();
-    println!("{args:?}")
+    let mut r = csv::Reader::from_path(args.path).unwrap();
+    let mut zombo = Zomboid::new(r.deserialize());
+    match args.cmd {
+        Command::List { take, skip } => {
+            zombo.set_take(take);
+            zombo.set_skip(skip);
+            let table = zombo.stream().unwrap();
+            println!("{table}");
+        }
+        Command::Describe => {
+            let table = zombo.describe().unwrap();
+            println!("{table}");
+        }
+    };
 }
