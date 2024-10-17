@@ -124,6 +124,7 @@ mod tests {
 
     #[test]
     fn readers_vec() {
+        // TODO: Use this https://docs.rs/tempfile/3.0.4/tempfile/fn.tempdir.html
         panic!("write later")
     }
 
