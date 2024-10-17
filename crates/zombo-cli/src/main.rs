@@ -3,7 +3,11 @@ use std::{
     fs, io,
     path::{Path, PathBuf},
 };
-use zombo::{model::Item, Zomboid};
+use zombo::{
+    model::{Item, Stat},
+    table::Table,
+    Zomboid,
+};
 
 #[derive(Parser, Debug)]
 #[command(name = "Zomboid CLI")]
@@ -27,7 +31,7 @@ enum Command {
     Describe,
 }
 
-fn readers(path: impl AsRef<Path>) -> io::Result<Vec<csv::Reader<fs::File>>> {
+fn path_to_readers(path: impl AsRef<Path>) -> io::Result<Vec<csv::Reader<fs::File>>> {
     let mut vec = Vec::new();
     for entry in fs::read_dir(path)? {
         let entry = entry?;
@@ -36,25 +40,68 @@ fn readers(path: impl AsRef<Path>) -> io::Result<Vec<csv::Reader<fs::File>>> {
     Ok(vec)
 }
 
+enum ZomboIter<S, D> {
+    Single(Zomboid<S>),
+    Dir(Zomboid<D>),
+}
+
+impl<S, D, E> ZomboIter<S, D>
+where
+    S: Iterator<Item = Result<Item, E>>,
+    D: Iterator<Item = Result<Item, E>>,
+    E: std::error::Error,
+{
+    fn list_table(&mut self, take: Option<usize>, skip: Option<usize>) -> Result<Table<Item>, E> {
+        match self {
+            Self::Single(z) => {
+                z.set_take(take);
+                z.set_skip(skip);
+                z.stream()
+            }
+            Self::Dir(z) => {
+                z.set_take(take);
+                z.set_skip(skip);
+                z.stream()
+            }
+        }
+    }
+
+    fn describe_table(&mut self) -> Result<Table<Stat>, E> {
+        match self {
+            Self::Single(z) => z.describe(),
+            Self::Dir(z) => z.describe(),
+        }
+    }
+}
+
 fn main() {
     let args = Args::parse();
-    let mut r = csv::Reader::from_path(args.path.as_path()).unwrap();
-    let mut zombo = Zomboid::new(r.deserialize());
-    let mut rdrs = readers(args.path).unwrap();
 
-    // TODO: organize the code adequatelly.
-    //       Check if is_dir()
-    let mut zombo1 = Zomboid::new(rdrs.iter_mut().flat_map(|it| it.deserialize::<Item>()));
-    // vec.iter_mut().flat_map(|it| it.deserialize::<Item>())
+    // Using readers Vec we ensure that Readers aren't dropped
+    // until iterators aren't read.
+    let mut readers = Vec::<csv::Reader<fs::File>>::new();
+
+    let mut zombo = if args.path.is_file() {
+        readers.push(
+            csv::Reader::from_path(args.path.as_path()).expect("Couldn't create a CSV reader."),
+        );
+        ZomboIter::Single(Zomboid::new(readers[0].deserialize()))
+    } else {
+        readers = path_to_readers(args.path).expect("Couldn't read directory.");
+        ZomboIter::Dir(Zomboid::new(
+            readers.iter_mut().flat_map(|it| it.deserialize::<Item>()),
+        ))
+    };
+
     match args.cmd {
         Command::List { take, skip } => {
-            zombo.set_take(take);
-            zombo.set_skip(skip);
-            let table = zombo1.stream().unwrap();
+            let table = zombo
+                .list_table(take, skip)
+                .expect("Couldn't list CSV data.");
             println!("{table}");
         }
         Command::Describe => {
-            let table = zombo1.describe().unwrap();
+            let table = zombo.describe_table().expect("Couldn't describe CSV data.");
             println!("{table}");
         }
     };
