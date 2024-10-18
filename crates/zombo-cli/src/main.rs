@@ -114,8 +114,31 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::Args;
+    use super::*;
     use clap::CommandFactory;
+    use csv::Writer;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    fn setup_csv_file(p: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+        let mut writer = Writer::from_path(p.as_ref())?;
+
+        writer.write_record(["id", "name", "type", "condition", "amount"])?;
+
+        writer.write_record(["1", "Hummer", "Tool", "Mint", "10"])?;
+
+        writer.write_record(["2", "Nails", "Fasteners", "Good", "400"])?;
+        writer.write_record(["2", "Nails", "Fasteners", "Mint", "100"])?;
+        writer.write_record(["3", "Garden saw", "Tool", "New", "2"])?;
+        writer.write_record(["4", "Metal saw", "Tool", "New", "2"])?;
+
+        Ok(())
+    }
+
+    fn setup_sub_dir(p: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+        fs::create_dir(p)?;
+        Ok(())
+    }
 
     #[test]
     fn verify_cli() {
@@ -124,12 +147,41 @@ mod tests {
 
     #[test]
     fn readers_vec() {
-        // TODO: Use this https://docs.rs/tempfile/3.0.4/tempfile/fn.tempdir.html
-        panic!("write later")
+        let dir = tempdir().unwrap();
+        let f1 = dir.path().join("f1.csv");
+
+        // tests if csv::Reader can handle CSV with file having
+        // non CSV extension
+        let f2 = dir.path().join("f2.txt");
+
+        setup_csv_file(&f1).unwrap();
+        setup_csv_file(&f2).unwrap();
+
+        let rdrs = dir_to_readers(dir.path()).unwrap();
+        assert_eq!(rdrs.len(), 2);
+
+        for mut v in rdrs {
+            assert!(v.headers().is_ok());
+        }
     }
 
     #[test]
-    fn readers_vec_error() {
-        panic!("write later")
+    fn readers_vec_non_csv() {
+        let dir = tempdir().unwrap();
+        let f1 = dir.path().join("f1.csv");
+        let f2 = dir.path().join("f2");
+
+        setup_csv_file(&f1).unwrap();
+        setup_sub_dir(&f2).unwrap();
+
+        let readers = dir_to_readers(dir.path()).unwrap();
+        let mut has_error = false;
+        for mut v in readers {
+            has_error = v.headers().is_err();
+            if has_error {
+                break;
+            }
+        }
+        assert!(has_error);
     }
 }
