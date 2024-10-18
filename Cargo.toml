@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "zombo"
+    "crates/zombo", 
+    "crates/zombo-cli"
 ]

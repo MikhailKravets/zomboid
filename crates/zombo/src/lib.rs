@@ -55,7 +55,7 @@
 //!
 //! The code above will make `z` object to take next 10 items skipping the first 5 ones.
 use model::{Item, Stat};
-use std::{collections::HashMap, usize};
+use std::collections::HashMap;
 use table::Table;
 
 pub mod model;
@@ -158,6 +158,7 @@ mod tests {
     use std::{fs, io};
     use uuid::Uuid;
 
+    // TODO: use tempfile crate!
     const BASE_PATH: &str = "~/.cache/rust/testing";
 
     fn setup_csv() -> Result<PathBuf, Box<dyn Error>> {
