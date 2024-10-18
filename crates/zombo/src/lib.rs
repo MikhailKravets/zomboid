@@ -158,6 +158,7 @@ mod tests {
     use std::{fs, io};
     use uuid::Uuid;
 
+    // TODO: use tempfile crate!
     const BASE_PATH: &str = "~/.cache/rust/testing";
 
     fn setup_csv() -> Result<PathBuf, Box<dyn Error>> {
